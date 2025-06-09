@@ -82,6 +82,8 @@ class HttpResponse:
     def parse_json_body(self, path: str | None = None, none_on_error: bool = False) -> Any
     def is_err(self) -> bool
     def content_type(self) -> str | None
+    def to_result_ok[T](self, value: T) -> Result[T]
+    def to_result_err[T](self, error: str | Exception | None = None) -> Result[T]
 ```
 
 ### Error Types
@@ -149,6 +151,35 @@ response = await http_request(
     user_agent="MyApp/1.0"
 )
 ```
+
+### Result Type Integration
+
+For applications using `Result[T, E]` pattern, `HttpResponse` provides convenient methods to convert responses into Result types:
+
+```python
+from mm_result import Result
+
+async def get_user_id() -> Result[int]:
+    response = await http_request("https://api.example.com/user")
+
+    if response.is_err():
+        return response.to_result_err()  # Convert error to Result[T]
+
+    user_id = response.parse_json_body("id")
+    return response.to_result_ok(user_id)  # Convert success to Result[T]
+
+# Usage
+result = await get_user_id()
+if result.is_ok():
+    print(f"User ID: {result.value}")
+else:
+    print(f"Error: {result.error}")
+    print(f"HTTP details: {result.extra}")  # Contains full HTTP response data
+```
+
+**Result Methods:**
+- `to_result_ok(value)` - Create `Result[T]` with success value, preserving HTTP details in `extra`
+- `to_result_err(error?)` - Create `Result[T]` with error, preserving HTTP details in `extra`
 
 ## When to Use
 

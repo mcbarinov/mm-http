@@ -1,14 +1,14 @@
 [project]
 name = "mm-http"
-version = "0.0.1"
+version = "0.0.2"
 description = ""
 requires-python = ">=3.13"
 dependencies = [
     "requests[socks]~=2.32.3",
-    "aiohttp~=3.12.2",
+    "aiohttp~=3.12.11",
     "aiohttp-socks~=0.10.1",
     "pydantic>=2.11.5",
-    "mm-result>=0.0.2",
+    "mm-result>=0.0.3",
     "pydash>=8.0.5",
 ]
 
@@ -18,11 +18,11 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 dev-dependencies = [
-    "pytest~=8.3.5",
+    "pytest~=8.4.0",
     "pytest-asyncio~=1.0.0",
     "pytest-xdist~=3.7.0",
     "pytest-httpserver~=1.1.3",
-    "ruff~=0.11.11",
+    "ruff~=0.11.13",
     "mypy~=1.16.0",
     "pip-audit~=2.9.0",
     "bandit~=1.8.3",
