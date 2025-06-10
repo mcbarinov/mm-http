@@ -1,14 +1,14 @@
 [project]
 name = "mm-http"
-version = "0.0.2"
+version = "0.0.3"
 description = ""
 requires-python = ">=3.13"
 dependencies = [
-    "requests[socks]~=2.32.3",
-    "aiohttp~=3.12.11",
+    "requests[socks]~=2.32.4",
+    "aiohttp~=3.12.12",
     "aiohttp-socks~=0.10.1",
     "pydantic>=2.11.5",
-    "mm-result>=0.0.3",
+    "mm-result>=0.0.4",
     "pydash>=8.0.5",
 ]
 
