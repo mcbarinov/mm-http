@@ -1,15 +1,14 @@
 [project]
 name = "mm-http"
-version = "0.0.3"
+version = "0.1.0"
 description = ""
 requires-python = ">=3.13"
 dependencies = [
+    "mm-result~=0.1.1",
     "requests[socks]~=2.32.4",
     "aiohttp~=3.12.12",
     "aiohttp-socks~=0.10.1",
-    "pydantic>=2.11.5",
-    "mm-result>=0.0.4",
-    "pydash>=8.0.5",
+    "pydash~=8.0.5",
 ]
 
 [build-system]
@@ -27,7 +26,7 @@ dev-dependencies = [
     "pip-audit~=2.9.0",
     "bandit~=1.8.3",
     "pre-commit~=4.2.0",
-    "types-requests~=2.32.0.20250602",
+    "types-requests~=2.32.4.20250611",
     "python-dotenv~=1.1.0",
 ]
 

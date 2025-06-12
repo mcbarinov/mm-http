@@ -7,8 +7,6 @@ from typing import Any
 
 import pydash
 from mm_result import Result
-from pydantic import GetCoreSchemaHandler
-from pydantic_core import CoreSchema, core_schema
 
 
 @enum.unique
@@ -90,25 +88,3 @@ class HttpResponse:
         if self.headers is not None:
             parts.append(f"headers={self.headers!r}")
         return f"HttpResponse({', '.join(parts)})"
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source_type: type[Any], _handler: GetCoreSchemaHandler) -> CoreSchema:
-        return core_schema.no_info_after_validator_function(
-            cls._validate,
-            core_schema.any_schema(),
-            serialization=core_schema.plain_serializer_function_ser_schema(lambda x: x.to_dict()),
-        )
-
-    @classmethod
-    def _validate(cls, value: object) -> HttpResponse:
-        if isinstance(value, cls):
-            return value
-        if isinstance(value, dict):
-            return cls(
-                status_code=value.get("status_code"),
-                error=HttpError(value["error"]) if value.get("error") else None,
-                error_message=value.get("error_message"),
-                body=value.get("body"),
-                headers=value.get("headers"),
-            )
-        raise TypeError(f"Invalid value for HttpResponse: {value}")

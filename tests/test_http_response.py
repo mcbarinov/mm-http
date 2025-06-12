@@ -11,7 +11,7 @@ def test_to_result_ok_with_simple_value():
     assert isinstance(result, Result)
     assert result.is_ok()
     assert result.value == 42
-    assert result.extra["status_code"] == 200
+    assert result.extra and result.extra["status_code"] == 200
 
 
 def test_to_result_ok_with_parsed_json():
@@ -22,7 +22,7 @@ def test_to_result_ok_with_parsed_json():
 
     assert result.is_ok()
     assert result.value == 123
-    assert result.extra["headers"]["content-type"] == "application/json"
+    assert result.extra and result.extra["headers"]["content-type"] == "application/json"
 
 
 def test_to_result_err_with_http_error():
@@ -32,7 +32,7 @@ def test_to_result_err_with_http_error():
 
     assert result.is_err()
     assert result.error == HttpError.TIMEOUT
-    assert result.extra["error"] == "timeout"
+    assert result.extra and result.extra["error"] == "timeout"
     assert result.extra["error_message"] == "Request timed out"
 
 
@@ -43,7 +43,7 @@ def test_to_result_err_with_custom_error():
 
     assert result.is_err()
     assert result.error == "Custom error message"
-    assert result.extra["status_code"] == 404
+    assert result.extra and result.extra["status_code"] == 404
 
 
 def test_to_result_err_with_exception():
@@ -54,7 +54,7 @@ def test_to_result_err_with_exception():
 
     assert result.is_err()
     assert result.error == "ValueError: Connection failed"
-    assert result.extra["error"] == "connection"
+    assert result.extra and result.extra["error"] == "connection"
 
 
 def test_to_result_err_fallback():
@@ -64,7 +64,7 @@ def test_to_result_err_fallback():
 
     assert result.is_err()
     assert result.error == "error"
-    assert result.extra["status_code"] == 500
+    assert result.extra and result.extra["status_code"] == 500
 
 
 def test_result_methods_preserve_response_data():
