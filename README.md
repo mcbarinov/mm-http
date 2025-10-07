@@ -60,9 +60,9 @@ user_name = response.parse_json_body("name")
 - `url: str` - Request URL
 - `method: str = "GET"` - HTTP method
 - `params: dict[str, Any] | None = None` - URL query parameters
-- `data: dict[str, object] | None = None` - Form data
-- `json: dict[str, object] | None = None` - JSON data
-- `headers: dict[str, str] | None = None` - HTTP headers
+- `data: dict[str, Any] | None = None` - Form data
+- `json: dict[str, Any] | None = None` - JSON data
+- `headers: dict[str, Any] | None = None` - HTTP headers
 - `cookies: LooseCookies | None = None` - Cookies
 - `user_agent: str | None = None` - User-Agent header
 - `proxy: str | None = None` - Proxy URL (supports http://, https://, socks4://, socks5://)
