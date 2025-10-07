@@ -100,7 +100,7 @@ async def _request_with_http_or_none_proxy(
             status_code=res.status,
             error=None,
             error_message=None,
-            body=(await res.read()).decode(),
+            body=await res.text(),
             headers=headers_dict(res.headers),
         )
 
@@ -128,7 +128,7 @@ async def _request_with_socks_proxy(
             status_code=res.status,
             error=None,
             error_message=None,
-            body=(await res.read()).decode(),
+            body=await res.text(),
             headers=headers_dict(res.headers),
         )
 
