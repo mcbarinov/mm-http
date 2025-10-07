@@ -1,7 +1,15 @@
 from typing import Any
 
 import requests
-from requests.exceptions import InvalidSchema, MissingSchema, ProxyError
+from requests.exceptions import (
+    ConnectionError as RequestsConnectionError,
+)
+from requests.exceptions import (
+    InvalidSchema,
+    MissingSchema,
+    ProxyError,
+    SSLError,
+)
 
 from .response import HttpError, HttpResponse
 
@@ -59,5 +67,7 @@ def http_request_sync(
         return HttpResponse(error=HttpError.PROXY, error_message=str(e))
     except (InvalidSchema, MissingSchema) as e:
         return HttpResponse(error=HttpError.INVALID_URL, error_message=str(e))
+    except (RequestsConnectionError, SSLError) as e:
+        return HttpResponse(error=HttpError.CONNECTION, error_message=str(e))
     except Exception as e:
         return HttpResponse(error=HttpError.ERROR, error_message=str(e))

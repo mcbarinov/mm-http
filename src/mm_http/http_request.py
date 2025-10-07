@@ -1,7 +1,15 @@
 from typing import Any
 
 import aiohttp
-from aiohttp import ClientHttpProxyError, InvalidUrlClientError
+from aiohttp import (
+    ClientConnectionError,
+    ClientConnectorError,
+    ClientHttpProxyError,
+    ClientSSLError,
+    InvalidUrlClientError,
+    ServerConnectionError,
+    ServerDisconnectedError,
+)
 from aiohttp.typedefs import LooseCookies
 from aiohttp_socks import ProxyConnectionError, ProxyConnector
 from multidict import CIMultiDictProxy
@@ -61,6 +69,14 @@ async def http_request(
         return HttpResponse(error=HttpError.PROXY, error_message=str(err))
     except InvalidUrlClientError as e:
         return HttpResponse(error=HttpError.INVALID_URL, error_message=str(e))
+    except (
+        ClientConnectorError,
+        ServerConnectionError,
+        ServerDisconnectedError,
+        ClientSSLError,
+        ClientConnectionError,
+    ) as err:
+        return HttpResponse(error=HttpError.CONNECTION, error_message=str(err))
     except Exception as err:
         return HttpResponse(error=HttpError.ERROR, error_message=str(err))
 

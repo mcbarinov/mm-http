@@ -93,3 +93,21 @@ def test_http_request_sync_invalid_url_with_proxy() -> None:
     assert response.status_code is None
     assert response.body is None
     assert response.headers is None
+
+
+def test_connection_error_refused() -> None:
+    """Test CONNECTION error when port is not listening."""
+    response = http_request_sync("http://localhost:59999/test", timeout=2)
+    assert response.error == HttpError.CONNECTION
+    assert response.error_message is not None
+    assert response.status_code is None
+    assert response.body is None
+
+
+def test_connection_error_dns() -> None:
+    """Test CONNECTION error when DNS resolution fails."""
+    response = http_request_sync("http://this-host-does-not-exist-xyz123.invalid/", timeout=5)
+    assert response.error == HttpError.CONNECTION
+    assert response.error_message is not None
+    assert response.status_code is None
+    assert response.body is None
