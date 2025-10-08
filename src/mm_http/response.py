@@ -64,10 +64,6 @@ class HttpResponse(BaseModel):
                 return None
             raise
 
-    def text(self) -> str | None:
-        """Get response body as text."""
-        return self.body
-
     def get_header(self, name: str) -> str | None:
         """Get header value (case-insensitive)."""
         if self.headers is None:
@@ -96,15 +92,11 @@ class HttpResponse(BaseModel):
             result_error = f"HTTP {self.status_code}"
         else:
             result_error = "error"
-        return Result.err(result_error, extra=self.to_dict())
+        return Result.err(result_error, extra=self.model_dump(mode="json"))
 
     def to_result_ok[T](self, value: T) -> Result[T]:
         """Create success Result[T] from HttpResponse with given value."""
-        return Result.ok(value, extra=self.to_dict())
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert HttpResponse to dictionary with JSON-safe values."""
-        return self.model_dump(mode="json")
+        return Result.ok(value, extra=self.model_dump(mode="json"))
 
     @property
     def content_type(self) -> str | None:

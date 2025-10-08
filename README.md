@@ -79,7 +79,6 @@ class HttpResponse(BaseModel):
 
     # JSON parsing
     def parse_json(self, path: str | None = None, none_on_error: bool = False) -> Any
-    def text(self) -> str | None
 
     # Header access
     def get_header(self, name: str) -> str | None
