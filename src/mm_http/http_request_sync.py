@@ -11,7 +11,7 @@ from requests.exceptions import (
     SSLError,
 )
 
-from .response import HttpError, HttpResponse
+from .response import HttpResponse, TransportError, TransportErrorDetail
 
 
 def http_request_sync(
@@ -56,18 +56,16 @@ def http_request_sync(
         )
         return HttpResponse(
             status_code=res.status_code,
-            error=None,
-            error_message=None,
             body=res.text,
             headers=dict(res.headers),
         )
     except requests.Timeout as e:
-        return HttpResponse(error=HttpError.TIMEOUT, error_message=str(e))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.TIMEOUT, message=str(e)))
     except ProxyError as e:
-        return HttpResponse(error=HttpError.PROXY, error_message=str(e))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.PROXY, message=str(e)))
     except (InvalidSchema, MissingSchema) as e:
-        return HttpResponse(error=HttpError.INVALID_URL, error_message=str(e))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.INVALID_URL, message=str(e)))
     except (RequestsConnectionError, SSLError) as e:
-        return HttpResponse(error=HttpError.CONNECTION, error_message=str(e))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.CONNECTION, message=str(e)))
     except Exception as e:
-        return HttpResponse(error=HttpError.ERROR, error_message=str(e))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.ERROR, message=str(e)))

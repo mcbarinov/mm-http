@@ -14,7 +14,7 @@ from aiohttp.typedefs import LooseCookies
 from aiohttp_socks import ProxyConnectionError, ProxyConnector
 from multidict import CIMultiDictProxy
 
-from .response import HttpError, HttpResponse
+from .response import HttpResponse, TransportError, TransportErrorDetail
 
 
 async def http_request(
@@ -64,11 +64,11 @@ async def http_request(
             timeout=timeout_,
         )
     except TimeoutError as err:
-        return HttpResponse(error=HttpError.TIMEOUT, error_message=str(err))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.TIMEOUT, message=str(err)))
     except (aiohttp.ClientProxyConnectionError, ProxyConnectionError, ClientHttpProxyError) as err:
-        return HttpResponse(error=HttpError.PROXY, error_message=str(err))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.PROXY, message=str(err)))
     except InvalidUrlClientError as e:
-        return HttpResponse(error=HttpError.INVALID_URL, error_message=str(e))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.INVALID_URL, message=str(e)))
     except (
         ClientConnectorError,
         ServerConnectionError,
@@ -76,9 +76,9 @@ async def http_request(
         ClientSSLError,
         ClientConnectionError,
     ) as err:
-        return HttpResponse(error=HttpError.CONNECTION, error_message=str(err))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.CONNECTION, message=str(err)))
     except Exception as err:
-        return HttpResponse(error=HttpError.ERROR, error_message=str(err))
+        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.ERROR, message=str(err)))
 
 
 async def _request_with_http_or_none_proxy(
@@ -98,8 +98,6 @@ async def _request_with_http_or_none_proxy(
     ) as res:
         return HttpResponse(
             status_code=res.status,
-            error=None,
-            error_message=None,
             body=await res.text(),
             headers=headers_dict(res.headers),
         )
@@ -126,8 +124,6 @@ async def _request_with_socks_proxy(
     ):
         return HttpResponse(
             status_code=res.status,
-            error=None,
-            error_message=None,
             body=await res.text(),
             headers=headers_dict(res.headers),
         )

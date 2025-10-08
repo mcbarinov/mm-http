@@ -21,7 +21,7 @@ from mm_http import http_request
 
 # Simple GET request
 response = await http_request("https://api.github.com/users/octocat")
-user_name = response.parse_json_body("name")  # Navigate JSON with dot notation
+user_name = response.parse_json("name")  # Navigate JSON with dot notation
 
 # POST with JSON data
 response = await http_request(
@@ -45,7 +45,7 @@ from mm_http import http_request_sync
 
 # Same API, but synchronous
 response = http_request_sync("https://api.github.com/users/octocat")
-user_name = response.parse_json_body("name")
+user_name = response.parse_json("name")
 ```
 
 ## API Reference
@@ -71,25 +71,40 @@ user_name = response.parse_json_body("name")
 ### HttpResponse
 
 ```python
-@dataclass
-class HttpResponse:
+class HttpResponse(BaseModel):
     status_code: int | None
-    error: HttpError | None
-    error_message: str | None
     body: str | None
     headers: dict[str, str] | None
+    transport_error: TransportErrorDetail | None
 
-    def parse_json_body(self, path: str | None = None, none_on_error: bool = False) -> Any
-    def is_err(self) -> bool
-    def content_type(self) -> str | None
+    # JSON parsing
+    def parse_json(self, path: str | None = None, none_on_error: bool = False) -> Any
+    def text(self) -> str | None
+
+    # Header access
+    def get_header(self, name: str) -> str | None
+    @property content_type(self) -> str | None
+
+    # Status checks
+    def is_success(self) -> bool  # 2xx status
+    def is_err(self) -> bool  # Has transport error or status >= 400
+
+    # Result conversion
     def to_result_ok[T](self, value: T) -> Result[T]
     def to_result_err[T](self, error: str | Exception | None = None) -> Result[T]
+
+    # Pydantic methods
+    def model_dump(self, mode: str = "python") -> dict[str, Any]
+
+class TransportErrorDetail(BaseModel):
+    type: TransportError
+    message: str
 ```
 
 ### Error Types
 
 ```python
-class HttpError(str, Enum):
+class TransportError(str, Enum):
     TIMEOUT = "timeout"
     PROXY = "proxy"
     INVALID_URL = "invalid_url"
@@ -105,11 +120,14 @@ class HttpError(str, Enum):
 response = await http_request("https://api.github.com/users/octocat")
 
 # Instead of: json.loads(response.body)["plan"]["name"]
-plan_name = response.parse_json_body("plan.name")
+plan_name = response.parse_json("plan.name")
 
 # Safe navigation - returns None if path doesn't exist
-followers = response.parse_json_body("followers_count")
-nonexistent = response.parse_json_body("does.not.exist")  # Returns None
+followers = response.parse_json("followers_count")
+nonexistent = response.parse_json("does.not.exist")  # Returns None
+
+# Or get full JSON
+data = response.parse_json()
 ```
 
 ### Error Handling
@@ -117,8 +135,16 @@ nonexistent = response.parse_json_body("does.not.exist")  # Returns None
 ```python
 response = await http_request("https://example.com", timeout=5.0)
 
+# Simple check
+if response.is_success():
+    data = response.parse_json()
+
+# Detailed error handling
 if response.is_err():
-    print(f"Request failed: {response.error} - {response.error_message}")
+    if response.transport_error:
+        print(f"Transport error: {response.transport_error.type} - {response.transport_error.message}")
+    elif response.status_code >= 400:
+        print(f"HTTP error: {response.status_code}")
 else:
     print(f"Success: {response.status_code}")
 ```
@@ -163,17 +189,17 @@ async def get_user_id() -> Result[int]:
     response = await http_request("https://api.example.com/user")
 
     if response.is_err():
-        return response.to_result_err()  # Convert error to Result[T]
+        return response.to_result_err()  # Returns "HTTP 404" or TransportError.TIMEOUT
 
-    user_id = response.parse_json_body("id")
-    return response.to_result_ok(user_id)  # Convert success to Result[T]
+    user_id = response.parse_json("id")
+    return response.to_result_ok(user_id)
 
 # Usage
 result = await get_user_id()
 if result.is_ok():
     print(f"User ID: {result.value}")
 else:
-    print(f"Error: {result.error}")
+    print(f"Error: {result.error}")  # "HTTP 404" or TransportError.TIMEOUT
     print(f"HTTP details: {result.extra}")  # Contains full HTTP response data
 ```
 
