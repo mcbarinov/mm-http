@@ -135,3 +135,29 @@ def test_is_success():
 
     # Transport error
     assert not HttpResponse(transport_error=TransportErrorDetail(type=TransportError.TIMEOUT, message="timeout")).is_success()
+
+
+def test_error_message():
+    """Test error_message property."""
+    # Transport error - returns "{type}: {message}"
+    assert (
+        HttpResponse(transport_error=TransportErrorDetail(type=TransportError.TIMEOUT, message="Request timed out")).error_message
+        == "timeout: Request timed out"
+    )
+
+    assert (
+        HttpResponse(
+            transport_error=TransportErrorDetail(type=TransportError.CONNECTION, message="Connection refused")
+        ).error_message
+        == "connection: Connection refused"
+    )
+
+    # HTTP error (status >= 400) - returns "HTTP {status}"
+    assert HttpResponse(status_code=404).error_message == "HTTP 404"
+    assert HttpResponse(status_code=500).error_message == "HTTP 500"
+    assert HttpResponse(status_code=400).error_message == "HTTP 400"
+
+    # Success (status < 400) - returns None
+    assert HttpResponse(status_code=200).error_message is None
+    assert HttpResponse(status_code=201).error_message is None
+    assert HttpResponse(status_code=399).error_message is None

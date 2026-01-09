@@ -82,6 +82,15 @@ class HttpResponse(BaseModel):
         """Check if response represents an error (has transport error or status >= 400)."""
         return self.transport_error is not None or (self.status_code is not None and self.status_code >= 400)
 
+    @property
+    def error_message(self) -> str | None:
+        """Get error message if transport_error is set or status_code >= 400, else None."""
+        if self.transport_error:
+            return f"{self.transport_error.type.value}: {self.transport_error.message}"
+        if self.status_code is not None and self.status_code >= 400:
+            return f"HTTP {self.status_code}"
+        return None
+
     def to_result_err[T](self, error: str | Exception | tuple[str, Exception] | None = None) -> Result[T]:
         """Create error Result[T] from HttpResponse with meaningful error message."""
         if error is not None:
