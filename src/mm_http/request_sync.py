@@ -1,15 +1,10 @@
+"""Sync HTTP request implementation using requests library."""
+
 from typing import Any
 
 import requests
-from requests.exceptions import (
-    ConnectionError as RequestsConnectionError,
-)
-from requests.exceptions import (
-    InvalidSchema,
-    MissingSchema,
-    ProxyError,
-    SSLError,
-)
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import InvalidSchema, MissingSchema, ProxyError, SSLError
 
 from .response import HttpResponse, TransportError, TransportErrorDetail
 
@@ -27,9 +22,7 @@ def http_request_sync(
     proxy: str | None = None,
     timeout: float | None = 10.0,
 ) -> HttpResponse:
-    """
-    Send a synchronous HTTP request and return the response.
-    """
+    """Send a synchronous HTTP request and return the response."""
     if user_agent:
         if headers is None:
             headers = {}

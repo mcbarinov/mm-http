@@ -1,3 +1,5 @@
+"""Async HTTP request implementation using aiohttp."""
+
 from typing import Any
 
 import aiohttp
@@ -30,9 +32,7 @@ async def http_request(
     proxy: str | None = None,
     timeout: float | None = 10.0,
 ) -> HttpResponse:
-    """
-    Send an HTTP request and return the response.
-    """
+    """Send an HTTP request and return the response."""
     timeout_ = aiohttp.ClientTimeout(total=timeout) if timeout else None
     if user_agent:
         if not headers:
@@ -93,6 +93,7 @@ async def _request_with_http_or_none_proxy(
     proxy: str | None = None,
     timeout: aiohttp.ClientTimeout | None,
 ) -> HttpResponse:
+    """Execute request with HTTP proxy or no proxy."""
     async with aiohttp.request(
         method, url, params=params, data=data, json=json, headers=headers, cookies=cookies, proxy=proxy, timeout=timeout
     ) as res:
@@ -115,6 +116,7 @@ async def _request_with_socks_proxy(
     cookies: LooseCookies | None = None,
     timeout: aiohttp.ClientTimeout | None,
 ) -> HttpResponse:
+    """Execute request through SOCKS proxy."""
     connector = ProxyConnector.from_url(proxy)
     async with (
         aiohttp.ClientSession(connector=connector) as session,
@@ -130,6 +132,7 @@ async def _request_with_socks_proxy(
 
 
 def headers_dict(headers: CIMultiDictProxy[str]) -> dict[str, str]:
+    """Convert multidict headers to dict, joining duplicate keys with comma."""
     result: dict[str, str] = {}
     for key in headers:
         values = headers.getall(key)

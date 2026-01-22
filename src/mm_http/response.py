@@ -1,4 +1,4 @@
-from __future__ import annotations
+"""HTTP response models and error types."""
 
 import enum
 import json
@@ -11,6 +11,8 @@ from pydantic import BaseModel, model_validator
 
 @enum.unique
 class TransportError(str, enum.Enum):
+    """Transport-level error types."""
+
     TIMEOUT = "timeout"
     PROXY = "proxy"
     INVALID_URL = "invalid_url"
@@ -49,7 +51,7 @@ class HttpResponse(BaseModel):
 
         return self
 
-    def parse_json(self, path: str | None = None, none_on_error: bool = False) -> Any:  # noqa: ANN401
+    def parse_json(self, path: str | None = None, none_on_error: bool = False) -> Any:  # noqa: ANN401 - JSON returns dynamic types
         """Parse JSON body and optionally extract value by path."""
         if self.body is None:
             if none_on_error:
