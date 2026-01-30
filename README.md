@@ -6,7 +6,7 @@ A simple and convenient HTTP client library for Python with both synchronous and
 
 - **Simple API** for one-off HTTP requests
 - **Sync and Async** support with identical interfaces
-- **JSON path navigation** with dot notation (`response.parse_json_body("user.profile.name")`)
+- **JSON path navigation** with dot notation (`response.json_body_or_none("user.profile.name")`)
 - **Proxy support** (HTTP and SOCKS5)
 - **Unified error handling**
 - **Type-safe** with full type annotations
@@ -21,7 +21,7 @@ from mm_http import http_request
 
 # Simple GET request
 response = await http_request("https://api.github.com/users/octocat")
-user_name = response.parse_json("name")  # Navigate JSON with dot notation
+user_name = response.json_body_or_none("name")  # Navigate JSON with dot notation
 
 # POST with JSON data
 response = await http_request(
@@ -45,7 +45,7 @@ from mm_http import http_request_sync
 
 # Same API, but synchronous
 response = http_request_sync("https://api.github.com/users/octocat")
-user_name = response.parse_json("name")
+user_name = response.json_body_or_none("name")
 ```
 
 ## API Reference
@@ -63,10 +63,12 @@ user_name = response.parse_json("name")
 - `data: dict[str, Any] | None = None` - Form data
 - `json: dict[str, Any] | None = None` - JSON data
 - `headers: dict[str, Any] | None = None` - HTTP headers
-- `cookies: LooseCookies | None = None` - Cookies
+- `cookies: dict[str, str] | None = None` - Cookies
 - `user_agent: str | None = None` - User-Agent header
 - `proxy: str | None = None` - Proxy URL (supports http://, https://, socks4://, socks5://)
 - `timeout: float | None = 10.0` - Request timeout in seconds
+- `verify_ssl: bool = True` - Enable/disable SSL certificate verification
+- `follow_redirects: bool = True` - Enable/disable following redirects
 
 ### HttpResponse
 
@@ -75,10 +77,11 @@ class HttpResponse(BaseModel):
     status_code: int | None
     body: str | None
     headers: dict[str, str] | None
-    transport_error: TransportErrorDetail | None
+    transport_error: TransportError | None
 
     # JSON parsing
-    def parse_json(self, path: str | None = None, none_on_error: bool = False) -> Any
+    def json_body(self, path: str | None = None) -> Result[Any]
+    def json_body_or_none(self, path: str | None = None) -> Any
 
     # Header access
     def get_header(self, name: str) -> str | None
@@ -95,15 +98,15 @@ class HttpResponse(BaseModel):
     # Pydantic methods
     def model_dump(self, mode: str = "python") -> dict[str, Any]
 
-class TransportErrorDetail(BaseModel):
-    type: TransportError
+class TransportError(BaseModel):
+    type: TransportErrorType
     message: str
 ```
 
 ### Error Types
 
 ```python
-class TransportError(str, Enum):
+class TransportErrorType(str, Enum):
     TIMEOUT = "timeout"
     PROXY = "proxy"
     INVALID_URL = "invalid_url"
@@ -119,14 +122,21 @@ class TransportError(str, Enum):
 response = await http_request("https://api.github.com/users/octocat")
 
 # Instead of: json.loads(response.body)["plan"]["name"]
-plan_name = response.parse_json("plan.name")
+plan_name = response.json_body_or_none("plan.name")
 
 # Safe navigation - returns None if path doesn't exist
-followers = response.parse_json("followers_count")
-nonexistent = response.parse_json("does.not.exist")  # Returns None
+followers = response.json_body_or_none("followers_count")
+nonexistent = response.json_body_or_none("does.not.exist")  # Returns None
 
 # Or get full JSON
-data = response.parse_json()
+data = response.json_body_or_none()
+
+# When None is a valid value, use json_body() for explicit error handling
+result = response.json_body("optional_field")
+if result.is_ok():
+    value = result.value  # Could be None if field is null in JSON
+else:
+    print(f"Error: {result.error}")  # "body is None", "JSON decode error", or "path not found: ..."
 ```
 
 ### Error Handling
@@ -136,7 +146,7 @@ response = await http_request("https://example.com", timeout=5.0)
 
 # Simple check
 if response.is_success():
-    data = response.parse_json()
+    data = response.json_body_or_none()
 
 # Detailed error handling
 if response.is_err():
@@ -188,9 +198,9 @@ async def get_user_id() -> Result[int]:
     response = await http_request("https://api.example.com/user")
 
     if response.is_err():
-        return response.to_result_err()  # Returns "HTTP 404" or TransportError.TIMEOUT
+        return response.to_result_err()  # Returns "HTTP 404" or TransportErrorType.TIMEOUT
 
-    user_id = response.parse_json("id")
+    user_id = response.json_body_or_none("id")
     return response.to_result_ok(user_id)
 
 # Usage
@@ -198,7 +208,7 @@ result = await get_user_id()
 if result.is_ok():
     print(f"User ID: {result.value}")
 else:
-    print(f"Error: {result.error}")  # "HTTP 404" or TransportError.TIMEOUT
+    print(f"Error: {result.error}")  # "HTTP 404" or TransportErrorType.TIMEOUT
     print(f"HTTP details: {result.extra}")  # Contains full HTTP response data
 ```
 

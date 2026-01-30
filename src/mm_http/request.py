@@ -12,11 +12,10 @@ from aiohttp import (
     ServerConnectionError,
     ServerDisconnectedError,
 )
-from aiohttp.typedefs import LooseCookies
 from aiohttp_socks import ProxyConnectionError, ProxyConnector
 from multidict import CIMultiDictProxy
 
-from .response import HttpResponse, TransportError, TransportErrorDetail
+from .response import HttpResponse, TransportErrorType
 
 
 async def http_request(
@@ -27,10 +26,12 @@ async def http_request(
     data: dict[str, Any] | None = None,
     json: dict[str, Any] | None = None,
     headers: dict[str, Any] | None = None,
-    cookies: LooseCookies | None = None,
+    cookies: dict[str, str] | None = None,
     user_agent: str | None = None,
     proxy: str | None = None,
     timeout: float | None = 10.0,
+    verify_ssl: bool = True,
+    follow_redirects: bool = True,
 ) -> HttpResponse:
     """Send an HTTP request and return the response."""
     timeout_ = aiohttp.ClientTimeout(total=timeout) if timeout else None
@@ -51,6 +52,8 @@ async def http_request(
                 cookies=cookies,
                 proxy=proxy,
                 timeout=timeout_,
+                verify_ssl=verify_ssl,
+                follow_redirects=follow_redirects,
             )
         return await _request_with_http_or_none_proxy(
             url,
@@ -62,13 +65,15 @@ async def http_request(
             cookies=cookies,
             proxy=proxy,
             timeout=timeout_,
+            verify_ssl=verify_ssl,
+            follow_redirects=follow_redirects,
         )
     except TimeoutError as err:
-        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.TIMEOUT, message=str(err)))
+        return HttpResponse.from_transport_error(TransportErrorType.TIMEOUT, str(err))
     except (aiohttp.ClientProxyConnectionError, ProxyConnectionError, ClientHttpProxyError) as err:
-        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.PROXY, message=str(err)))
-    except InvalidUrlClientError as e:
-        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.INVALID_URL, message=str(e)))
+        return HttpResponse.from_transport_error(TransportErrorType.PROXY, str(err))
+    except InvalidUrlClientError as err:
+        return HttpResponse.from_transport_error(TransportErrorType.INVALID_URL, str(err))
     except (
         ClientConnectorError,
         ServerConnectionError,
@@ -76,9 +81,9 @@ async def http_request(
         ClientSSLError,
         ClientConnectionError,
     ) as err:
-        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.CONNECTION, message=str(err)))
+        return HttpResponse.from_transport_error(TransportErrorType.CONNECTION, str(err))
     except Exception as err:
-        return HttpResponse(transport_error=TransportErrorDetail(type=TransportError.ERROR, message=str(err)))
+        return HttpResponse.from_transport_error(TransportErrorType.ERROR, str(err))
 
 
 async def _request_with_http_or_none_proxy(
@@ -89,13 +94,25 @@ async def _request_with_http_or_none_proxy(
     data: dict[str, Any] | None = None,
     json: dict[str, Any] | None = None,
     headers: dict[str, Any] | None = None,
-    cookies: LooseCookies | None = None,
+    cookies: dict[str, str] | None = None,
     proxy: str | None = None,
     timeout: aiohttp.ClientTimeout | None,
+    verify_ssl: bool,
+    follow_redirects: bool,
 ) -> HttpResponse:
     """Execute request with HTTP proxy or no proxy."""
     async with aiohttp.request(
-        method, url, params=params, data=data, json=json, headers=headers, cookies=cookies, proxy=proxy, timeout=timeout
+        method,
+        url,
+        params=params,
+        data=data,
+        json=json,
+        headers=headers,
+        cookies=cookies,
+        proxy=proxy,
+        timeout=timeout,
+        ssl=verify_ssl,
+        allow_redirects=follow_redirects,
     ) as res:
         return HttpResponse(
             status_code=res.status,
@@ -113,15 +130,25 @@ async def _request_with_socks_proxy(
     data: dict[str, Any] | None = None,
     json: dict[str, Any] | None = None,
     headers: dict[str, Any] | None = None,
-    cookies: LooseCookies | None = None,
+    cookies: dict[str, str] | None = None,
     timeout: aiohttp.ClientTimeout | None,
+    verify_ssl: bool,
+    follow_redirects: bool,
 ) -> HttpResponse:
     """Execute request through SOCKS proxy."""
-    connector = ProxyConnector.from_url(proxy)
+    connector = ProxyConnector.from_url(proxy, ssl=verify_ssl)
     async with (
         aiohttp.ClientSession(connector=connector) as session,
         session.request(
-            method, url, params=params, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout
+            method,
+            url,
+            params=params,
+            data=data,
+            json=json,
+            headers=headers,
+            cookies=cookies,
+            timeout=timeout,
+            allow_redirects=follow_redirects,
         ) as res,
     ):
         return HttpResponse(

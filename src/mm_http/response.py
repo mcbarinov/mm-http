@@ -10,7 +10,7 @@ from pydantic import BaseModel, model_validator
 
 
 @enum.unique
-class TransportError(str, enum.Enum):
+class TransportErrorType(str, enum.Enum):
     """Transport-level error types."""
 
     TIMEOUT = "timeout"
@@ -20,10 +20,10 @@ class TransportError(str, enum.Enum):
     ERROR = "error"
 
 
-class TransportErrorDetail(BaseModel):
+class TransportError(BaseModel):
     """Transport error with type and message."""
 
-    type: TransportError
+    type: TransportErrorType
     message: str
 
 
@@ -33,7 +33,7 @@ class HttpResponse(BaseModel):
     status_code: int | None = None
     body: str | None = None
     headers: dict[str, str] | None = None
-    transport_error: TransportErrorDetail | None = None
+    transport_error: TransportError | None = None
 
     @model_validator(mode="after")
     def validate_mutually_exclusive_states(self) -> HttpResponse:
@@ -51,20 +51,38 @@ class HttpResponse(BaseModel):
 
         return self
 
-    def parse_json(self, path: str | None = None, none_on_error: bool = False) -> Any:  # noqa: ANN401 - JSON returns dynamic types
-        """Parse JSON body and optionally extract value by path."""
-        if self.body is None:
-            if none_on_error:
-                return None
-            raise ValueError("Body is None")
+    @classmethod
+    def from_transport_error(cls, error_type: TransportErrorType, message: str) -> HttpResponse:
+        """Create HttpResponse from transport error."""
+        return cls(transport_error=TransportError(type=error_type, message=message))
 
+    def json_body(self, path: str | None = None) -> Result[Any]:
+        """Parse body as JSON with explicit error handling."""
+        if self.body is None:
+            return Result.err("body is None")
+        try:
+            data = json.loads(self.body)
+        except json.JSONDecodeError as e:
+            return Result.err(("JSON decode error", e))
+
+        if path:
+            if not pydash.has(data, path):
+                return Result.err(f"path not found: {path}")
+            return Result.ok(pydash.get(data, path))
+        return Result.ok(data)
+
+    def json_body_or_none(self, path: str | None = None) -> Any:  # noqa: ANN401 - JSON returns dynamic types
+        """Parse body as JSON. Returns None if body is None, JSON invalid, or path not found.
+
+        Warning: Do not use if None is a valid expected value — use json_body() instead.
+        """
+        if self.body is None:
+            return None
         try:
             res = json.loads(self.body)
             return pydash.get(res, path, None) if path else res
         except json.JSONDecodeError:
-            if none_on_error:
-                return None
-            raise
+            return None
 
     def get_header(self, name: str) -> str | None:
         """Get header value (case-insensitive)."""
@@ -103,11 +121,11 @@ class HttpResponse(BaseModel):
             result_error = f"HTTP {self.status_code}"
         else:
             result_error = "error"
-        return Result.err(result_error, extra=self.model_dump(mode="json"))
+        return Result.err(result_error, context=self.model_dump(mode="json"))
 
     def to_result_ok[T](self, value: T) -> Result[T]:
         """Create success Result[T] from HttpResponse with given value."""
-        return Result.ok(value, extra=self.model_dump(mode="json"))
+        return Result.ok(value, context=self.model_dump(mode="json"))
 
     @property
     def content_type(self) -> str | None:
