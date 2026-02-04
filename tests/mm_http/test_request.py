@@ -187,9 +187,9 @@ class TestAsyncHttpRequestJson:
         """Parse JSON response body."""
         url = setup_json_endpoint()
         response = await http_request(url)
-        assert response.json_body_or_none() == json_response_data
-        assert response.json_body_or_none("user.id") == 123
-        assert response.json_body_or_none("user.profile.name") == "John Doe"
+        assert response.json_body().value == json_response_data
+        assert response.json_body("user.id").value == 123
+        assert response.json_body("user.profile.name").value == "John Doe"
 
 
 class TestAsyncHttpRequestRedirects:

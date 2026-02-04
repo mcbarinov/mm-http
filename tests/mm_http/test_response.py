@@ -89,51 +89,33 @@ class TestHttpResponseJsonParsing:
     def test_path_navigation(self, body: str, path: str | None, expected):
         """Navigate JSON with dot notation paths."""
         response = HttpResponse(status_code=200, body=body)
-        assert response.json_body_or_none(path) == expected
+        result = response.json_body(path)
+        assert result.is_ok()
+        assert result.value == expected
 
     def test_none_body(self):
-        """Return None when body is None."""
-        response = HttpResponse(status_code=204, body=None)
-        assert response.json_body_or_none("any.path") is None
-
-    def test_invalid_json(self):
-        """Return None for invalid JSON."""
-        response = HttpResponse(status_code=200, body="not json")
-        assert response.json_body_or_none() is None
-
-    def test_missing_path(self):
-        """Return None for non-existent path."""
-        response = HttpResponse(status_code=200, body='{"a": 1}')
-        assert response.json_body_or_none("b.c.d") is None
-
-    def test_null_value_in_json(self):
-        """Return None for null JSON value."""
-        response = HttpResponse(status_code=200, body='{"nullable": null}')
-        assert response.json_body_or_none("nullable") is None
-
-    def test_json_body_explicit_error_none_body(self):
-        """json_body returns error for None body."""
+        """Return error for None body."""
         response = HttpResponse(status_code=204, body=None)
         result = response.json_body("field")
         assert result.is_err()
         assert result.error == "body is None"
 
-    def test_json_body_explicit_error_invalid_json(self):
-        """json_body returns error for invalid JSON."""
+    def test_invalid_json(self):
+        """Return error for invalid JSON."""
         response = HttpResponse(status_code=200, body="not json")
         result = response.json_body()
         assert result.is_err()
         assert "JSON decode error" in str(result.error)
 
-    def test_json_body_explicit_error_missing_path(self):
-        """json_body returns error for missing path."""
+    def test_missing_path(self):
+        """Return error for missing path."""
         response = HttpResponse(status_code=200, body='{"a": 1}')
         result = response.json_body("b.c")
         assert result.is_err()
         assert "path not found" in str(result.error)
 
-    def test_json_body_returns_null_value(self):
-        """json_body returns None for null JSON value (not error)."""
+    def test_null_value(self):
+        """Return None for null JSON value (not error)."""
         response = HttpResponse(status_code=200, body='{"nullable": null}')
         result = response.json_body("nullable")
         assert result.is_ok()

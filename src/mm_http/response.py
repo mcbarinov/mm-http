@@ -10,7 +10,7 @@ from pydantic import BaseModel, model_validator
 
 
 @enum.unique
-class TransportErrorType(str, enum.Enum):
+class TransportErrorType(enum.StrEnum):
     """Transport-level error types."""
 
     TIMEOUT = "timeout"
@@ -70,19 +70,6 @@ class HttpResponse(BaseModel):
                 return Result.err(f"path not found: {path}")
             return Result.ok(pydash.get(data, path))
         return Result.ok(data)
-
-    def json_body_or_none(self, path: str | None = None) -> Any:  # noqa: ANN401 - JSON returns dynamic types
-        """Parse body as JSON. Returns None if body is None, JSON invalid, or path not found.
-
-        Warning: Do not use if None is a valid expected value — use json_body() instead.
-        """
-        if self.body is None:
-            return None
-        try:
-            res = json.loads(self.body)
-            return pydash.get(res, path, None) if path else res
-        except json.JSONDecodeError:
-            return None
 
     def get_header(self, name: str) -> str | None:
         """Get header value (case-insensitive)."""

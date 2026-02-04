@@ -6,7 +6,7 @@ A simple and convenient HTTP client library for Python with both synchronous and
 
 - **Simple API** for one-off HTTP requests
 - **Sync and Async** support with identical interfaces
-- **JSON path navigation** with dot notation (`response.json_body_or_none("user.profile.name")`)
+- **JSON path navigation** with dot notation (`response.json_body("user.profile.name")`)
 - **Proxy support** (HTTP and SOCKS5)
 - **Unified error handling**
 - **Type-safe** with full type annotations
@@ -21,7 +21,8 @@ from mm_http import http_request
 
 # Simple GET request
 response = await http_request("https://api.github.com/users/octocat")
-user_name = response.json_body_or_none("name")  # Navigate JSON with dot notation
+result = response.json_body("name")  # Navigate JSON with dot notation
+user_name = result.value if result.is_ok() else None
 
 # POST with JSON data
 response = await http_request(
@@ -45,7 +46,8 @@ from mm_http import http_request_sync
 
 # Same API, but synchronous
 response = http_request_sync("https://api.github.com/users/octocat")
-user_name = response.json_body_or_none("name")
+result = response.json_body("name")
+user_name = result.value if result.is_ok() else None
 ```
 
 ## API Reference
@@ -81,7 +83,6 @@ class HttpResponse(BaseModel):
 
     # JSON parsing
     def json_body(self, path: str | None = None) -> Result[Any]
-    def json_body_or_none(self, path: str | None = None) -> Any
 
     # Header access
     def get_header(self, name: str) -> str | None
@@ -122,19 +123,18 @@ class TransportErrorType(str, Enum):
 response = await http_request("https://api.github.com/users/octocat")
 
 # Instead of: json.loads(response.body)["plan"]["name"]
-plan_name = response.json_body_or_none("plan.name")
-
-# Safe navigation - returns None if path doesn't exist
-followers = response.json_body_or_none("followers_count")
-nonexistent = response.json_body_or_none("does.not.exist")  # Returns None
-
-# Or get full JSON
-data = response.json_body_or_none()
-
-# When None is a valid value, use json_body() for explicit error handling
-result = response.json_body("optional_field")
+result = response.json_body("plan.name")
 if result.is_ok():
-    value = result.value  # Could be None if field is null in JSON
+    plan_name = result.value
+
+# Navigate with dot notation
+followers = response.json_body("followers_count")
+nonexistent = response.json_body("does.not.exist")  # Result with error
+
+# Get full JSON
+result = response.json_body()
+if result.is_ok():
+    data = result.value
 else:
     print(f"Error: {result.error}")  # "body is None", "JSON decode error", or "path not found: ..."
 ```
@@ -146,7 +146,7 @@ response = await http_request("https://example.com", timeout=5.0)
 
 # Simple check
 if response.is_success():
-    data = response.json_body_or_none()
+    result = response.json_body()
 
 # Detailed error handling
 if response.is_err():
@@ -200,8 +200,10 @@ async def get_user_id() -> Result[int]:
     if response.is_err():
         return response.to_result_err()  # Returns "HTTP 404" or TransportErrorType.TIMEOUT
 
-    user_id = response.json_body_or_none("id")
-    return response.to_result_ok(user_id)
+    result = response.json_body("id")
+    if result.is_err():
+        return response.to_result_err("invalid_json")
+    return response.to_result_ok(result.value)
 
 # Usage
 result = await get_user_id()
